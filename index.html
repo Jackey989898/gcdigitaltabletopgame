@@ -336,7 +336,7 @@ dialog::backdrop{background:rgba(10,20,40,.55)}
       <button class="btn" id="draw"></button>
       <button class="btn ghost" id="redo">換掉本回合新抽的卡</button>
       <span class="left" id="left"></span>
-      <button class="btn ghost" id="peek">預覽未來三張</button>
+      <button class="btn ghost" id="peek">預覽未來一張</button>
       <span class="peekbox" id="peekbox" hidden></span>
     </div>
     <div class="table" id="table"></div>
@@ -382,22 +382,26 @@ dialog::backdrop{background:rgba(10,20,40,.55)}
 <script>
 const SDG={1:['終結貧窮','#B3262F'],2:['終結飢餓','#9A6A12'],3:['健康福祉','#23744A'],4:['優質教育','#B03A2E'],5:['性別平等','#C43D2E'],6:['清潔水資源','#0B7199'],7:['可負擔能源','#A8550B'],8:['就業與經濟成長','#8A2352'],9:['創新與基礎建設','#B25A1C'],10:['減少不平等','#B0175E'],11:['永續城鄉','#8A6A06'],12:['責任消費與生產','#7A5F1A'],13:['氣候行動','#386B34'],14:['海洋生態','#1565C0'],15:['陸域生態','#2E7D32'],16:['和平與正義','#1A5E8C'],17:['夥伴關係','#1F3A5F']};
 const C=[
-['directions_walk','上學路好危險','國小學童每日上下學路上面臨汽機車車流威脅，偏鄉與校園周邊導護志工常缺乏顯眼、安全的裝備，增加學童交通安全風險。',2],
+['soap','我肥皂呢','校園洗手台的水龍頭壞掉、肥皂用完，孩子常常沒洗手就吃點心、玩耍，容易生病，也還沒養成正確洗手的習慣。',2],
 ['breakfast_dining','早餐沒吃飽','許多偏鄉或弱勢家庭的小學生，常面臨早餐沒著落、營養不均衡，或是放學後肚子餓、缺乏課後陪伴與多元學習資源的困境。',3],
 ['waves','旗津垃圾危機','高雄人常到旗津、西子灣等海邊戲水或親近海洋，但面對海灘上的塑膠垃圾與海洋污染，缺乏深刻的減塑意識與實際行動機會。',1],
 ['wb_sunny','夏日大作戰','極端氣候讓高雄夏季高溫攀升，國小校園冷氣用電量大增，孩子天天吹冷氣，卻對「電從哪裡來、太陽能怎麼運作」缺乏直觀的體驗與節能觀念。',4],
 ['water_drop','細水長留','極端氣候導致缺水或暴雨威脅，小學生對水資源缺乏直觀認識，校園也缺乏能夠因應極端氣候的永續綠色設施。',5],
 ['security','反詐大作戰','數位時代下國小生很早接觸手機與網路遊戲，容易面臨金錢觀念模糊、網路遊戲儲值陷阱，甚至遇到網路詐騙的風險。',1],
-['visibility','老師，我看不到','國小學童長時間使用 3C 產品或閱讀姿勢不當，近視比例居高不下，偏鄉或弱勢學童常因家庭醫療資源匱乏，無法及時配鏡或進行眼科檢查，影響學習效果。',2]
+['visibility','老師，我看不到','國小學童長時間使用 3C 產品或閱讀姿勢不當，近視比例居高不下，偏鄉或弱勢學童常因家庭醫療資源匱乏，無法及時配鏡或進行眼科檢查，影響學習效果。',2],
+['face','我就是我','玩具與職業常被貼上「男生玩車、女生玩娃娃」的標籤，孩子因為性別刻板印象，不敢依自己的興趣探索科學、藝術或體育。',2],
+['sports_esports','放學去哪玩?','偏鄉小學生放學後常常沒人陪伴，缺乏課業輔導、營養晚餐和安全的去處，基礎語文與數學能力容易落後。',3]
 ];
 const B=[
-['和泰集團','自2011年起累積捐贈14萬套校園導護志工裝備。',[3]],
-['全聯福利中心','結合門市通路，將門市直接變成小學生的「沉浸式食育教室」，帶學童認識原型食材、閱讀食品標章與營養知識；同時捐助偏鄉學童營養早餐經費。',[2,3,10]],
-['日月光集團（日月光文教基金會）','結合高雄廠在地資源，深耕高雄國小推動「海洋永續與校園減塑計畫」，舉辦高雄國小學生淨灘活動，並將回收海廢塑膠製成教具送進高雄校園，引導孩子了解守護水下生態的重要性。',[14,12]],
-['中鋼公司（中鋼集團教育基金會）','深耕高雄在地，推動「綠能與環境教育校園巡迴」，打造綠能體驗教具深入高雄市國小，並贊助校園建置太陽能綠能設施與綠植遮陽，帶領高雄小學生動手做太陽能實驗，從小建立清潔能源觀念。',[7,4,13]],
-['黑松教育基金會','深耕桃園等地區國小推動「綠色校園計畫（黑松綠⁺校園生態計畫）」，贊助校園建置雨撲滿（雨水回收系統）用於沖廁與植物澆灌，並將永續環境與節水觀念融入國小實作課程。',[4,12,13,15]],
-['國泰金控（國泰世華銀行）','針對國小推動「金融素養與反詐小學堂」，由企業志工透過理財桌遊與線上直播課程，從小帶學童認識儲蓄、分辨需要與想要，並建立防詐意識。',[8,10]],
-['寶島眼鏡（與大學眼科）','長期走入校園推動「兒童視力關懷計畫」，派出專業驗光師與行動巡迴車進駐校園，免費為國小學童進行視力檢查、衛教宣導與免費量身配鏡。',[3,4]]
+['聯合利華與舒潔','深耕國小校園推動「校園潔淨洗手巡迴專案」，捐贈感應式洗手設備與清潔用品，並透過趣味教具帶孩子建立正確洗手與潔淨衛生的好習慣。',[3,6]],
+['全聯','結合門市通路，將門市直接變成小學生的「沉浸式食育教室」，帶學童認識原型食材、閱讀食品標章與營養知識；同時捐助偏鄉學童營養早餐經費。',[3,2,10]],
+['日月光集團（日月光文教基金會）','結合高雄廠在地資源，舉辦高雄國小學生淨灘活動，並將回收海廢塑膠製成教具送進高雄校園，引導孩子了解守護水下生態的重要性。',[3,14,12]],
+['中鋼公司','深耕高雄在地，推動「綠能與環境教育校園巡迴」，並贊助校園建置太陽能綠能設施與綠植遮陽，帶領高雄小學生動手做太陽能實驗。',[4,7,13]],
+['黑松教育基金會','深耕桃園等地區國小推動「綠色校園計畫」，贊助校園建置雨撲滿用於沖廁與植物澆灌，將永續與節水觀念融入課程。',[4,12,13,15]],
+['國泰金控','針對國小推動「金融素養與反詐小學堂」，由企業志工透過理財桌遊與線上直播課程，從小帶領學童認識儲蓄、分辨生活中的需要與想要，並建立防詐意識。',[8,10]],
+['寶島眼鏡（與大學眼科）','長期走入校園推動「兒童視力關懷計畫」，派出專業驗光師與行動巡迴車進駐校園，免費為國小學童進行視力檢查、衛教宣導與免費量身配鏡。',[3,4]],
+['玩具反斗城','推動「無界限玩樂與校園性別平權」活動，走入國小倡導打破玩具與職涯的性別刻板印象，提供性別友善教具，鼓勵小學生依興趣自由探索科學、藝術與體育。',[4,5]],
+['台積電文教基金會','推動「偏鄉國小課後輔導計畫」，資助偏鄉國小建立免費課後輔導班，提供課業補救教學、營養晚餐與陪伴，建立學童基礎語文與數學能力。',[1,4,10]]
 ];
 const PH=[
 ['觀測','看卡',4,'抽事件卡，一張一張看。想一想：這件事發生在誰身上？沒被拿走的卡會一直留在場上。每回合可以選擇抽 1 到 3 張。'],
@@ -412,9 +416,9 @@ const $=i=>document.getElementById(i);
 const fmt=v=>Number.isInteger(v)?v:v.toFixed(1);
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const zero=()=>Array(NG).fill(0);
-const fresh=()=>{const a=shuffle(C.map((_,i)=>i));return{v:4,round:1,phase:0,deck:a.slice(0,7),spare:a.slice(7),table:[],fresh:[],drawn:0,awards:{},bets:{},res:null,used:{},patents:Array.from({length:NG},()=>[]),settled:0,base:zero(),adj:zero(),streak:zero(),sealed:true,ban:[],rk:null,pick:0,stats:{sdg:zero(),ban:zero(),neg:zero()},holdR:{},items:[],holders:{},bonus:{},first:[],shield:[],hits:[]}};
+const fresh=()=>{const a=shuffle(C.map((_,i)=>i));return{v:5,round:1,phase:0,deck:a,spare:[],table:[],fresh:[],drawn:0,awards:{},bets:{},res:null,used:{},patents:Array.from({length:NG},()=>[]),settled:0,base:zero(),adj:zero(),streak:zero(),sealed:true,ban:[],rk:null,pick:0,stats:{sdg:zero(),ban:zero(),neg:zero()},holdR:{},items:[],holders:{},bonus:{},first:[],shield:[],hits:[]}};
 let S;try{S=JSON.parse(localStorage.getItem('fm-class'))}catch(e){}
-if(!S||S.v!==4)S=fresh();
+if(!S||S.v!==5)S=fresh();
 S.streak=S.streak||zero();S.ban=S.ban||[];S.stats=S.stats||{sdg:zero(),ban:zero()};S.items=S.items||[];S.holders=S.holders||{};S.bonus=S.bonus||{};S.first=S.first||[];S.shield=S.shield||[];S.hits=S.hits||[];S.holdR=S.holdR||{};S.stats.neg=S.stats.neg||zero();
 const save=()=>{try{localStorage.setItem('fm-class',JSON.stringify(S))}catch(e){}};
 const need=()=>Math.min(S.pick||(S.round===1?3:2),3);
@@ -451,7 +455,7 @@ function renderDraw(){
   d.textContent=S.phase!==0?'要在觀測階段才能抽卡':drawn?'本回合已抽卡':n<1?'牌堆已抽完':`抽 ${n} 張事件卡`;
   d.disabled=S.phase!==0||drawn||n<1;
   $('redo').style.display=S.phase===0&&drawn&&S.fresh.length&&S.fresh.every(id=>S.table.includes(id))&&S.spare.length>=S.fresh.length?'':'none';
-  $('left').textContent=`場上 ${S.table.length} 張，牌堆剩 ${S.deck.length} 張（本局共7張）`;
+  $('left').textContent=`場上 ${S.table.length} 張，牌堆剩 ${S.deck.length} 張（本局共9張）`;
   $('empty').style.display=S.table.length?'none':'';
   renderPick();
 }
@@ -630,10 +634,10 @@ function renderPick(){
   const off=S.phase!==0||S.drawn===S.round;
   document.querySelectorAll('#pickn button').forEach(b=>{const n=+b.dataset.n;b.classList.toggle('on',n===need());b.disabled=off||n>S.deck.length});
   $('peekbox').hidden=!peekOn;
-  $('peekbox').textContent=S.deck.length?'預覽：'+S.deck.slice(0,3).map((id,i)=>'①②③'[i]+' '+C[id][1]).join('　'):'牌堆已抽完';
+  $('peekbox').textContent=S.deck.length?'預覽：'+S.deck.slice(0,1).map(id=>C[id][1]).join('　'):'牌堆已抽完';
 }
 document.querySelectorAll('#pickn button').forEach(b=>b.onclick=()=>{S.pick=+b.dataset.n;save();renderDraw()});
-$('peek').onclick=()=>{peekOn=!peekOn;$('peek').textContent=peekOn?'收起預覽':'預覽未來三張';renderPick()};
+$('peek').onclick=()=>{peekOn=!peekOn;$('peek').textContent=peekOn?'收起預覽':'預覽未來一張';renderPick()};
 document.body.insertAdjacentHTML('beforeend','<dialog id="bn"><h2>禁用道具</h2><p class="note">使用者以外的所有組別，該中文字的籌碼全部失效。</p><div class="bnrow"><select id="bng" aria-label="使用禁用的組別">'+GC.map((c,g)=>`<option value="${g}">第${g+1}組${GN[g]}</option>`).join('')+'</select><span>禁用「</span><select id="bnk" aria-label="被禁用的籌碼">'+CT.map((t,k)=>`<option value="${k}">${t}</option>`).join('')+'</select><span>」籌碼</span></div><div class="row"><button class="btn" id="bnok">確認禁用</button><button class="btn ghost" id="bnno">取消</button></div></dialog>');
 $('bnno').onclick=()=>$('bn').close();
 $('bnok').onclick=()=>{$('bn').close();addBan(+$('bng').value,+$('bnk').value)};
@@ -698,18 +702,15 @@ const sndIcon=()=>{$('snd').firstChild.textContent=sndOn?'volume_up':'volume_off
 $('snd').onclick=()=>{sndOn=!sndOn;try{localStorage.setItem('fm-snd',sndOn?'1':'0')}catch(e){}sndIcon();tick()};
 sndIcon();
 const IT=[
-{ic:'directions_walk',t:'上學路好危險',ph:[2],lim:'限定在解決階段',fx:'本回合其他組別無法投資「人才」',use:'ban',bk:3},
-{ic:'breakfast_dining',t:'早餐沒吃飽',ph:[2],lim:'限定在解決階段',fx:'之後可以指定處理的事件卡，積分 +2',use:'bonus'},
-{ic:'waves',t:'旗津垃圾危機',lim:'任何階段皆可使用',fx:'得搶奪某組一項專利卡',use:'steal'},
-{ic:'wb_sunny',t:'夏日大作戰',ph:[2],lim:'限定在解決階段',fx:'本回合其他組別無法投資「關係」',use:'ban',bk:0},
-{ic:'water_drop',t:'細水長留',ph:[1,2],lim:'限定在投資與解決階段',fx:'查看一張卡的 SDGs',use:'text'},
-{ic:'security',t:'反詐大作戰',ph:[2],lim:'限定在解決階段',fx:'解決順序變為第一位',use:'first'},
-{ic:'visibility',t:'老師，我看不到',lim:'任何階段皆可使用',fx:'自己組別 +1 分',use:'plus1'},
-{ic:'face',t:'我就是我',ph:[1,2,3],lim:'限定在投資、解決與回收階段',fx:'查看尚未發生的事件卡兩張',use:'peek',n:2},
-{ic:'sports_esports',t:'放學去哪玩?',ph:[2],lim:'限定在解決（談判）階段',fx:'得指定某組無條件合作解決事件',use:'text'},
-{ic:'soap',t:'我肥皂呢？？',lim:'僅在其他組對你使用負面效果卡時可使用',fx:'無效化其他組別對你使用的負面效果卡（例如：禁用投資「人才」、原先在第一順位被取代）',use:'shield'},
-{ic:'factory',t:'高雄重工業轉型大考驗',ph:[2],lim:'限定在解決（談判）階段',fx:'合作解決事件時，本回合雙方獲得的積分皆額外 +1',use:'text'},
-{ic:'engineering',t:'職場安全還好嗎？',ph:[1,2,3],lim:'限定在投資、解決與回收階段',fx:'可觀看未發生的三張事件卡',use:'peek',n:3}
+{ic:'soap',t:'我肥皂呢',ph:[2],lim:'限定在解決階段使用',fx:'無效化其他組對你的負面效果卡',use:'shield'},
+{ic:'breakfast_dining',t:'早餐沒吃飽',ph:[2],lim:'限定在解決階段使用',fx:'當前處理的事件卡積分 +2',use:'bonus'},
+{ic:'waves',t:'旗津垃圾危機',ph:[2],lim:'限定在解決階段使用',fx:'得搶奪某組一項專利',use:'steal'},
+{ic:'wb_sunny',t:'夏日大作戰',ph:[2],lim:'限定在解決階段使用',fx:'本回合其他組別無法投資「關係」',use:'ban',bk:0},
+{ic:'water_drop',t:'細水長留',ph:[0],lim:'限定在觀測階段使用',fx:'查看一張事件卡的 SDGs',use:'text'},
+{ic:'security',t:'反詐大作戰',ph:[2],lim:'限定在解決階段使用',fx:'直接擔任當前事件領導者',use:'first'},
+{ic:'visibility',t:'老師，我看不到',ph:[2],lim:'限定在解決階段使用',fx:'自己組別積分 +1',use:'plus1'},
+{ic:'face',t:'我就是我',ph:[3],lim:'限定在回收階段使用',fx:'查看一張未發生的事件卡',use:'peek',n:1},
+{ic:'sports_esports',t:'放學去哪玩?',ph:[2],lim:'限定在解決階段使用',fx:'得指定某組無條件合作解決事件',use:'text'}
 ];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 document.body.insertAdjacentHTML('beforeend',`<dialog id="hd"><h2 id="hdt"></h2><p class="note">拿下的組別會得到這張卡，之後可在「可發動事件卡」使用。</p><div id="hdl" class="chl"></div><div class="row"><button class="btn ghost" id="hdno">沒有組別拿下</button></div></dialog>
@@ -785,7 +786,7 @@ function doUse(x){
 }
 function openItem(u){
   const x=S.items.find(y=>y.u===u);if(!x)return;curU=u;
-  const it=IT[x.k],c=x.k<7?C[x.k]:null,cu=canUse(x);
+  const it=IT[x.k],c=C[x.k],cu=canUse(x);
   $('izc').classList.remove('flipped');
   $('izc').innerHTML=`<div class="zi"><div class="zf"><div class="em"><span class="ms" aria-hidden="true">${it.ic}</span></div><h3>${it.t}</h3>${c?`<p>${c[2]}</p><div class="pts">拿下可得 ${c[3]} 分</div>`:'<p class="tag">特殊事件卡</p>'}<small class="hold">持有：${gname(x.g)}</small></div><div class="zb"><small class="hold">功能</small><p class="fxp">${it.fx}</p><p class="lim">${it.lim}</p>${it.use==='text'?'<p class="txt">此卡不會在系統內觸發，請在現實中發動。</p>':''}</div></div>`;
   $('izuse').hidden=it.use==='text';$('izuse').disabled=!cu.ok;
