@@ -749,7 +749,8 @@ document.body.insertAdjacentHTML('beforeend',`<dialog id="hd"><h2 id="hdt"></h2>
 let curU=null,peekT=0;
 const gname=g=>`第${g+1}組${GN[g]}`;
 function renderItems(){
-  $('items').innerHTML=S.items.length?Array.from({length:NG},(_,g)=>{const a=S.items.filter(x=>x.g===g);return a.length?`<div class="pr" style="--gc:${GC[g]}"><b>${gname(g)}</b>${a.map(x=>`<button class="ic" data-u="${x.u}"><span class="ms" aria-hidden="true">${IT[x.k].ic}</span>${IT[x.k].t}</button>`).join('')}</div>`:''}).join(''):'<p class="note">還沒有可發動的事件卡。</p>';
+  const items=STU&&MYG>=0?S.items.filter(x=>x.g===MYG):S.items;
+  $('items').innerHTML=items.length?Array.from({length:NG},(_,g)=>{const a=items.filter(x=>x.g===g);return a.length?`<div class="pr" style="--gc:${GC[g]}"><b>${gname(g)}</b>${a.map(x=>`<button class="ic" data-u="${x.u}"><span class="ms" aria-hidden="true">${IT[x.k].ic}</span>${IT[x.k].t}</button>`).join('')}</div>`:''}).join(''):'<p class="note">還沒有可發動的事件卡。</p>';
   $('items').querySelectorAll('.ic').forEach(b=>b.onclick=()=>openItem(b.dataset.u));
 }
 function addBan(g,k){if(!S.ban.some(b=>b.g===g&&b.k===k)){S.ban.push({g,k});S.stats.ban[g]++}S.res=null;save();renderBoard();toast(`🚫${gl(g)}禁用了「${CT[k]}」籌碼！`)}
@@ -817,15 +818,25 @@ function openItem(u){
   const it=IT[x.k],c=C[x.k],cu=canUse(x);
   $('izc').classList.remove('flipped');
   $('izc').innerHTML=`<div class="zi"><div class="zf"><div class="em"><span class="ms" aria-hidden="true">${it.ic}</span></div><h3>${it.t}</h3>${c?`<p>${c[2]}</p><div class="pts">拿下可得 ${c[3]} 分</div>`:'<p class="tag">特殊事件卡</p>'}<small class="hold">持有：${gname(x.g)}</small></div><div class="zb"><small class="hold">功能</small><p class="fxp">${it.fx}</p><p class="lim">${it.lim}</p>${it.use==='text'?'<p class="txt">此卡不會在系統內觸發，請在現實中發動。</p>':''}</div></div>`;
-  $('izuse').hidden=it.use==='text';$('izuse').disabled=!cu.ok;
-  $('izn').textContent=it.use==='text'||cu.ok?'':cu.why;
+  const waiting=STU&&pendingUseId&&pendingUseItemU===x.u;
+  $('izuse').hidden=it.use==='text';$('izuse').textContent=STU?(waiting?'等待老師回覆…':'請老師允許'):'使用';$('izuse').disabled=!cu.ok||!!waiting;
+  $('izn').textContent=waiting?'已送出申請，請等老師確認。':it.use==='text'||cu.ok?'':cu.why;
   $('iz').showModal();
 }
 $('izc').onclick=()=>$('izc').classList.toggle('flipped');
 $('izflip').onclick=()=>$('izc').classList.toggle('flipped');
 $('izx').onclick=()=>$('iz').close();
 $('izrm').onclick=()=>{S.items=S.items.filter(y=>y.u!==curU);save();renderItems();$('iz').close()};
-$('izuse').onclick=()=>{const x=S.items.find(y=>y.u===curU);if(!x||!canUse(x).ok)return;$('iz').close();doUse(x)};
+async function requestUse(x){
+  if(MYG<0||x.g!==MYG||!PIN||!ROOM)return;
+  const id=uid(),btn=$('izuse');btn.disabled=true;btn.textContent='送出申請…';
+  try{
+    const r=await fetch(`${DB()}/useRequests/${ROOM}/${PIN}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,itemU:x.u,ts:Date.now()})});
+    if(!r.ok){let detail=`HTTP ${r.status}`;try{const j=await r.json();detail=j.error||detail}catch(e){};throw new Error(detail)}
+    pendingUseId=id;pendingUseItemU=x.u;$('iz').close();toast('已向老師提出使用申請，請稍候。');
+  }catch(e){btn.disabled=false;btn.textContent='請老師允許';$('izn').textContent=`送出失敗：${e.message}`}
+}
+$('izuse').onclick=()=>{const x=S.items.find(y=>y.u===curU);if(!x||!canUse(x).ok)return;if(STU){requestUse(x);return}$('iz').close();doUse(x)};
 function askHolder(id){
   $('hdt').dataset.id=id;$('hdt').textContent=`「${C[id][1]}」由哪一組拿下？`;
   $('hdl').innerHTML=GC.map((c,g)=>`<button class="gb" data-g="${g}" style="--gc:${c}"><i></i>${gname(g)}</button>`).join('');
@@ -917,7 +928,7 @@ function negFail(){bcast('negFail',{});
 function syncSoon(){}
 function bcast(){}
 const DB=()=>FM_CONFIG.dbUrl.replace(/\/$/,'');
-let MYG=-1,PIN='',ROOM='',MYB={},mySeq=0,priv={},esP=null;
+let MYG=-1,PIN='',ROOM='',MYB={},mySeq=0,priv={},esP=null,pendingUseId='',pendingUseItemU='',lastUseReply='';
 let room={},es=null,seen=new Set(),gotInit=false,lastTs=0,lastTm=0,prevInit=false,stuIv=0;
 const setConn=t=>{$('conn').textContent=t};
 const toArr=x=>Array.isArray(x)?x:(x&&typeof x==='object'?Object.keys(x).sort((a,b)=>a-b).map(k=>x[k]):[]);
@@ -947,8 +958,11 @@ async function stuSend(){
   if(MYG<0)return;
   const b={};Object.keys(S.bets).forEach(k=>{const ks=S.bets[k].filter(([g])=>g===MYG).map(([,kk])=>kk);if(ks.length)b[k]=ks});
   MYB=b;mySeq=Math.max(Date.now(),mySeq+1);const seq=mySeq;
-  try{const r=await fetch(`${DB()}/inbox/${ROOM}/${PIN}.json`,{method:'PUT',body:JSON.stringify({seq,bets:b,ts:Date.now()})});if(!r.ok)throw new Error('x');setConn('已送出 ✓')}
-  catch(e){setConn('送出失敗，請再點一次')}
+  try{
+    const r=await fetch(`${DB()}/inbox/${ROOM}/${PIN}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({seq,bets:b,ts:Date.now()})});
+    if(!r.ok){let detail=`HTTP ${r.status}`;try{const j=await r.json();detail=j.error||detail}catch(e){};throw new Error(detail)}
+    setConn('已送出 ✓');
+  }catch(e){setConn(`送出失敗：${e.message}（請確認 Firebase Rules）`)}
 }
 function stuTm(tm){
   clearInterval(stuIv);secs=tm.secs;drawTime();$('time').parentNode.hidden=!PH[S.phase][2];
@@ -957,6 +971,7 @@ function stuTm(tm){
 function applySnap(m){
   const first=!prevInit,old=lastSc?lastSc.slice():null,prevTable=S.table.slice(),prevSig=JSON.stringify([S.table,S.bonus,OPEN]);
   S=normS(m.S);
+  if(pendingUseItemU&&!S.items.some(x=>x.u===pendingUseItemU)){pendingUseId='';pendingUseItemU=''}
   if(MYG>=0){selG=MYG;trayHide=false;overlayMine()}else{selG=m.ui.selG;trayHide=m.ui.trayHide}
   OPEN=toArr(m.ui.open);
   renderPhases();
@@ -1013,7 +1028,15 @@ function onSse(m,merge){
 }
 function onPriv(m,merge){
   priv=setIn(priv,m.path,m.data,merge);
-  if(MYG<0||(priv.ack||0)<mySeq)return;
+  if(MYG<0)return;
+  const reply=priv.useReply;
+  if(reply&&reply.id&&reply.id!==lastUseReply){
+    lastUseReply=reply.id;
+    if(reply.id===pendingUseId&&reply.decision==='wait'){
+      pendingUseId='';pendingUseItemU='';toast('老師請稍等，事件卡尚未發動。');renderItems();
+    }else if(reply.id===pendingUseId&&reply.decision==='allow')toast('老師已允許使用事件卡。');
+  }
+  if((priv.ack||0)<mySeq)return;
   MYB={};Object.entries(priv.bets||{}).forEach(([k,ks])=>{MYB[k]=toArr(ks).map(Number)});
   if(prevInit){overlayMine();renderBoard()}
 }

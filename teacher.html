@@ -733,7 +733,8 @@ document.body.insertAdjacentHTML('beforeend',`<dialog id="hd"><h2 id="hdt"></h2>
 <dialog id="iz"><div class="zc" id="izc"></div><p class="note" id="izn"></p><div class="row"><button class="btn ghost" id="izflip">翻面</button><button class="btn" id="izuse">使用</button></div><div class="row"><button class="btn ghost" id="izrm">移除這張卡</button><button class="btn ghost" id="izx">關閉</button></div></dialog>
 <dialog id="ch"><h2 id="cht"></h2><div id="chl" class="chl"></div><div class="row"><button class="btn ghost" id="chno">取消</button></div></dialog>
 <dialog id="gv"><h2>發放事件卡</h2><p class="note">補發特殊事件卡給某一組。</p><div class="bnrow"><select id="gvg" aria-label="組別">${GC.map((c,g)=>`<option value="${g}">第${g+1}組${GN[g]}</option>`).join('')}</select><span>獲得</span><select id="gvk" aria-label="事件卡">${IT.map((it,k)=>`<option value="${k}">${it.t}</option>`).join('')}</select></div><div class="row"><button class="btn" id="gvok">發放</button><button class="btn ghost" id="gvno">取消</button></div></dialog>
-<dialog id="pk"><span id="pkt" class="tiny"></span></dialog>`);
+<dialog id="pk"><span id="pkt" class="tiny"></span></dialog>
+<dialog id="useReq"><h2 id="useReqTitle">學生申請使用事件卡</h2><p class="note" id="useReqInfo"></p><p class="note" id="useReqWhy"></p><div class="row"><button class="btn" id="useReqAllow">允許</button><button class="btn ghost" id="useReqWait">稍等</button></div></dialog>`);
 let curU=null,peekT=0;
 const gname=g=>`第${g+1}組${GN[g]}`;
 function renderItems(){
@@ -903,7 +904,7 @@ function negFail(){bcast('negFail',{});
 }
 /* ---- 學生同步（Firebase Realtime Database，只用 fetch，不需要 SDK）---- */
 const CFG_OK=!/YOUR[-_]/.test((FM_CONFIG.dbUrl||'')+(FM_CONFIG.apiKey||''));
-const SY={on:false,code:'',pins:[],tok:'',exp:0,rt:'',email:'',pw:'',rem:false,q:Promise.resolve(),t:0,n:0,evs:[],msg:'',seen:{},ack:Array(NG).fill(0),polling:false};
+const SY={on:false,code:'',pins:[],tok:'',exp:0,rt:'',email:'',pw:'',rem:false,q:Promise.resolve(),t:0,n:0,evs:[],msg:'',seen:{},ack:Array(NG).fill(0),polling:false,usePolling:false,useSeen:{},useQueue:[],useCurrent:null,useReply:Array(NG).fill(null)};
 try{const o=JSON.parse(localStorage.getItem('fm-sync')||'{}');SY.code=o.code||'';SY.pins=o.pins||[];SY.email=o.email||'';SY.pw=o.pw||'';SY.rem=!!o.pw}catch(e){}
 const dbBase=()=>FM_CONFIG.dbUrl.replace(/\/$/,'');
 const fbUrl=p=>p==='@root'?`${dbBase()}/.json`:`${dbBase()}/rooms/${SY.code}${p?'/'+p:''}.json`;
@@ -935,7 +936,7 @@ function snapObj(){
   if(S.phase===1&&S.sealed!==false){const n={};Object.keys(c.bets).forEach(k=>{c.bets[k]=c.bets[k].map(([g,kk])=>g===open?[g,kk]:[g,(n[g]=(n[g]||0)+1)-1])})}
   return{S:c,ui:{selG,trayHide,open:openIds()},tm:{secs,run:!!iv},ts:Date.now()};
 }
-function privFor(g){const b={};Object.keys(S.bets).forEach(k=>{const ks=S.bets[k].filter(([x])=>x===g).map(([,kk])=>kk);if(ks.length)b[k]=ks});return{ack:SY.ack[g]||0,bets:b,ts:Date.now()}}
+function privFor(g){const b={};Object.keys(S.bets).forEach(k=>{const ks=S.bets[k].filter(([x])=>x===g).map(([,kk])=>kk);if(ks.length)b[k]=ks});const p={ack:SY.ack[g]||0,bets:b,ts:Date.now()};if(SY.useReply[g])p.useReply=SY.useReply[g];return p}
 function fullUpd(){const u={['rooms/'+SY.code+'/snap']:snapObj()};SY.pins.forEach((pin,g)=>{u['priv/'+SY.code+'/'+pin]=privFor(g)});return u}
 function setSt(t,ok){SY.msg=t;const e=$('systat');if(e)e.textContent=t;$('sybtn').textContent=SY.on?(ok?'📡 同步中 ✓':'📡 同步異常'):'📡 學生同步'}
 function syncNow(){if(!SY.on)return;clearTimeout(SY.t);SY.t=0;const u=fullUpd();SY.q=SY.q.then(()=>fbSend('PATCH','@root',u)).then(()=>setSt('已同步',true),e=>setSt('同步失敗：'+e.message))}
@@ -964,11 +965,54 @@ async function pollInbox(){
   try{
     await ensureTok();
     const r=await fetch(`${dbBase()}/inbox/${SY.code}.json?auth=${encodeURIComponent(SY.tok)}`);
-    if(r.ok){const d=(await r.json())||{};SY.pins.forEach((pin,g)=>{const e=d[pin];if(e&&e.seq>(SY.seen[pin]||0))applyInbox(g,pin,e)})}
-  }catch(e){}
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const d=(await r.json())||{};SY.pins.forEach((pin,g)=>{const e=d[pin];if(e&&e.seq>(SY.seen[pin]||0))applyInbox(g,pin,e)});
+  }catch(e){const msg=`讀取學生收件匣失敗：${e.message}`;if(SY.msg!==msg)setSt(msg,false)}
   SY.polling=false;
 }
 setInterval(pollInbox,800);
+function showUseRequest(){
+  if(!SY.on||SY.useCurrent||!SY.useQueue.length||[...document.querySelectorAll('dialog[open]')].some(d=>d.id!=='useReq'))return;
+  const q=SY.useCurrent=SY.useQueue.shift(),x=q.item;
+  $('useReqTitle').textContent=`${gname(q.g)}申請使用事件卡`;
+  $('useReqInfo').textContent=x?`「${IT[x.k].t}」：${IT[x.k].fx}`:`申請的卡牌已不存在或不屬於此組。`;
+  const cu=x?canUse(x):{ok:false,why:'請稍等，老師無法確認這張卡。'};
+  $('useReqWhy').textContent=cu.ok?'確認有效，可允許這張卡由教師端發動。':cu.why;
+  $('useReqAllow').disabled=!cu.ok;
+  $('useReq').showModal();
+}
+async function pollUseRequests(){
+  if(!SY.on||SY.usePolling)return;SY.usePolling=true;
+  try{
+    await ensureTok();
+    const r=await fetch(`${dbBase()}/useRequests/${SY.code}.json?auth=${encodeURIComponent(SY.tok)}`);
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const d=(await r.json())||{};
+    SY.pins.forEach((pin,g)=>{
+      const q=d[pin];if(!q||!q.id||q.id===SY.useSeen[pin])return;
+      SY.useSeen[pin]=q.id;
+      if(SY.useReply[g]&&SY.useReply[g].id===q.id){SY.q=SY.q.then(()=>fbSend('PATCH','@root',{[`useRequests/${SY.code}/${pin}`]:null})).catch(()=>{});return}
+      const item=S.items.find(x=>x.u===q.itemU&&x.g===g)||null;
+      SY.useQueue.push({g,pin,request:q,item});
+    });
+    showUseRequest();
+  }catch(e){const msg=`讀取使用申請失敗：${e.message}`;if(SY.msg!==msg)setSt(msg,false)}
+  SY.usePolling=false;
+}
+setInterval(pollUseRequests,800);
+function answerUseRequest(allow){
+  const q=SY.useCurrent;if(!q)return;
+  const x=q.item,cu=x?canUse(x):{ok:false};
+  if(allow&&(!x||!cu.ok))return;
+  $('useReq').close();SY.useCurrent=null;
+  SY.useReply[q.g]={id:q.request.id,decision:allow?'allow':'wait',ts:Date.now()};
+  const u=fullUpd();u[`useRequests/${SY.code}/${q.pin}`]=null;
+  SY.q=SY.q.then(()=>fbSend('PATCH','@root',u)).then(()=>setSt('已同步',true),e=>setSt('同步失敗：'+e.message));
+  if(allow)doUse(x);
+  setTimeout(showUseRequest,0);
+}
+$('useReqAllow').onclick=()=>answerUseRequest(true);
+$('useReqWait').onclick=()=>answerUseRequest(false);
 document.body.insertAdjacentHTML('beforeend','<dialog id="sy"><h2>📡 學生同步</h2><div id="syb"></div><div class="row"><button class="btn ghost" id="syx">關閉</button></div></dialog>');
 const genCode=()=>Array.from({length:6},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.random()*32|0]).join('');
 function ensureCodes(){
@@ -983,7 +1027,8 @@ async function startSync(keep){
   if(!SY.email||!SY.pw){setSt('請輸入 Email 與密碼');return}
   try{
     setSt('登入中…');SY.tok='';SY.rt='';await signIn();
-    ensureCodes();saveCfg();SY.seen={};SY.ack=Array(NG).fill(0);
+    ensureCodes();saveCfg();SY.seen={};SY.ack=Array(NG).fill(0);SY.useSeen={};SY.useQueue=[];SY.useCurrent=null;
+    SY.useReply=await Promise.all(SY.pins.map(async pin=>{try{const r=await fetch(`${dbBase()}/priv/${SY.code}/${pin}.json?auth=${encodeURIComponent(SY.tok)}`);if(!r.ok)return null;const d=await r.json();return d&&d.useReply||null}catch(e){return null}}));
     const u=fullUpd();SY.pins.forEach((pin,g)=>{u['gcodes/'+pin]={room:SY.code,g}});
     await fbSend('PATCH','@root',u);
     SY.on=true;setSt('已同步',true);
