@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>未來企業家登陸戰（學生端）v4.3</title>
+<title>未來企業家登陸戰（學生端）v4.3.3</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700;900&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0">
@@ -18,6 +18,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.65 var(--rou
 h1,h2,h3{font-family:var(--round);font-weight:700;margin:0}
 button,select{font:inherit;color:inherit}
 button{cursor:pointer}
+button:not(:disabled){transition:transform .12s ease,filter .15s ease}
+@media(hover:hover) and (pointer:fine){button:not(:disabled):hover{filter:brightness(1.12) saturate(1.15)}}
+button:not(:disabled):active{transform:scale(.92)}
 :focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 .ms{font-family:'Material Symbols Rounded';font-weight:500;font-style:normal;font-size:2.8rem;line-height:1;display:inline-block;white-space:nowrap;font-feature-settings:'liga';font-variation-settings:'FILL' 1,'wght' 500}
 header{background:var(--deep);color:var(--on-deep);padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
@@ -335,7 +338,12 @@ body.stu #draw,body.stu #redo,body.stu #pickn,body.stu #peek,body.stu #peekbox,b
 body.stu.grp .tray{display:flex!important}
 body.stu .tile,body.stu summary{cursor:default}
 body.stu.grp .tile{cursor:pointer}
-#privatePeek{width:min(480px,92vw);max-height:94vh;overflow:auto}
+#privatePeek{width:min(480px,92vw);max-height:94vh;overflow:auto;position:relative}
+.peek-timer{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:5}
+.peek-timer .track{fill:none;stroke:rgba(75,190,210,.18);stroke-width:1.3}
+.peek-timer .progress{fill:none;stroke:#79f4ff;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:1000 1000;filter:drop-shadow(0 0 3px #79f4ff) drop-shadow(0 0 7px rgba(80,225,255,.8))}
+.peek-timer .flow{fill:none;stroke:#e2ffff;stroke-width:3.1;stroke-linecap:round;stroke-dasharray:28 972;filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 8px #45dfff);animation:peekFlow 2.4s linear infinite}
+@keyframes peekFlow{to{stroke-dashoffset:-1000}}
 .preview-shell{height:340px;perspective:1000px;margin:12px 0}
 .preview-card{position:relative;height:100%;transform-style:preserve-3d;transition:transform .65s cubic-bezier(.2,.8,.2,1)}
 .preview-card.flip{transform:rotateY(180deg)}
@@ -360,9 +368,9 @@ body.stu.grp .tile{cursor:pointer}
 </style>
 </head>
 <body class="stu">
-<div id="join"><div class="jbox"><span class="ms" aria-hidden="true">public</span><h1>未來企業家登陸戰 <span class="version">v4.3</span></h1><p>輸入老師給你們組的組別碼</p><input id="jcode" maxlength="6" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="分享碼"><button class="btn" id="jgo">進入</button><p id="jmsg"></p></div></div><div id="conn"></div><div id="me" hidden></div>
+<div id="join"><div class="jbox"><span class="ms" aria-hidden="true">public</span><h1>未來企業家登陸戰 <span class="version">v4.3.3</span></h1><p>輸入老師給你們組的組別碼</p><input id="jcode" maxlength="6" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="分享碼"><button class="btn" id="jgo">進入</button><p id="jmsg"></p></div></div><div id="conn"></div><div id="me" hidden></div>
 <header>
-  <h1><span class="ms" aria-hidden="true">public</span> 未來企業家登陸戰 <span class="version">v4.3</span></h1>
+  <h1><span class="ms" aria-hidden="true">public</span> 未來企業家登陸戰 <span class="version">v4.3.3</span></h1>
   <div class="rounds" aria-label="回合"><span id="r1">第1回合</span><span id="r2">第2回合</span><span id="r3">第3回合</span><button class="btn ghost" id="snd" aria-label="音效開關"><span class="ms" aria-hidden="true">volume_up</span></button></div>
 </header>
 <nav class="phases" id="phases"></nav>
@@ -446,8 +454,8 @@ const B=[
 ['台積電文教基金會','推動「偏鄉國小課後輔導計畫」，資助偏鄉國小建立免費課後輔導班，提供課業補救教學、營養晚餐與陪伴，建立學童基礎語文與數學能力。',[1,4,10]]
 ];
 const PH=[
-['觀測','看卡',4,'抽事件卡，一張一張看。想一想：這件事發生在誰身上？沒被拿走的卡會一直留在場上。每回合可以選擇抽 1 到 3 張。'],
-['投資','討論、下注',2,'先在「SDGs17夥伴關係」下注決定組別順序，再把其他籌碼放到想拿下的 SDGs。每顆籌碼只能放一處。蓋牌模式下，下注完請再點一次自己的組別，把籌碼蓋起來。'],
+['觀測','看卡',2,'抽事件卡，一張一張看。想一想：這件事發生在誰身上？沒被拿走的卡會一直留在場上。每回合可以選擇抽 1 到 3 張。'],
+['投資','討論、下注',1,'先在「SDGs17夥伴關係」下注決定組別順序，再把其他籌碼放到想拿下的 SDGs。每顆籌碼只能放一處。蓋牌模式下，下注完請再點一次自己的組別，把籌碼蓋起來。'],
 ['解決','拿分、談判',3.5,'依組別順序處理卡片：先使用相同 SDG 尚未使用的專利卡；沒有可用專利卡時，再使用本回合投資取得的 SDG。事件卡解決時會自動標記已使用資源；本回合仍可重複使用，結算時再處理。卡片被拿走後按「完成」。有組別使用「禁用」道具時，按 SDGs 指標右側的「禁用」。'],
 ['回收','結算本回合',0,'按「結算本回合」，灰階 SDGs 會成為下一回合的專利卡；灰階專利卡視為已使用並移除。']];
 const R4=['執行長','財務長','秘書長','發言人'],R3=['執行長(兼發言人)','財務長','秘書長'];
@@ -471,8 +479,10 @@ let secs=PH[0][2]*60,iv=null;
 function drawTime(){const m=String(secs/60|0).padStart(2,'0'),s=String(secs%60).padStart(2,'0');$('time').textContent=m+':'+s;$('time').classList.toggle('end',secs===0)}
 function stop(){clearInterval(iv);iv=null;$('go').textContent='開始'}
 function resetTime(){stop();secs=PH[S.phase][2]*60;$('time').parentNode.hidden=!PH[S.phase][2];drawTime()}
-function beep(){try{const a=new AudioContext(),t=a.currentTime;[[659.25,0],[783.99,.2],[987.77,.42]].forEach(([f,d])=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(.045,t+d+.06);g.gain.exponentialRampToValueAtTime(.0001,t+d+.42);o.connect(g);g.connect(a.destination);o.start(t+d);o.stop(t+d+.45)});setTimeout(()=>a.close(),1100)}catch(e){}}
-$('go').onclick=()=>{if(iv){stop();return}if(secs===0)resetTime();$('go').textContent='暫停';iv=setInterval(()=>{secs--;drawTime();if(secs<=0){stop();beep()}},1000)};
+let timerAudio=null;
+function prepareTimerAudio(){try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;timerAudio=timerAudio||new Ctx();if(timerAudio.state==='suspended')timerAudio.resume().catch(()=>{})}catch(e){}}
+function beep(){try{if(!timerAudio)prepareTimerAudio();const a=timerAudio;if(!a)return;const play=()=>{const t=a.currentTime;[[659.25,0],[783.99,.2],[987.77,.42]].forEach(([f,d])=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(.045,t+d+.06);g.gain.exponentialRampToValueAtTime(.0001,t+d+.42);o.connect(g);g.connect(a.destination);o.start(t+d);o.stop(t+d+.45)})};if(a.state==='suspended')a.resume().then(play).catch(()=>{});else play()}catch(e){}}
+$('go').onclick=()=>{if(iv){stop();return}prepareTimerAudio();if(secs===0)resetTime();$('go').textContent='暫停';iv=setInterval(()=>{secs--;drawTime();if(secs<=0){stop();beep()}},1000)};
 $('rst').onclick=resetTime;
 
 function renderPhases(){
@@ -785,7 +795,7 @@ document.body.insertAdjacentHTML('beforeend',`<dialog id="hd"><h2 id="hdt"></h2>
 <dialog id="ch"><h2 id="cht"></h2><div id="chl" class="chl"></div><div class="row"><button class="btn ghost" id="chno">取消</button></div></dialog>
 <dialog id="gv"><h2>發放事件卡</h2><p class="note">補發特殊事件卡給某一組。</p><div class="bnrow"><select id="gvg" aria-label="組別">${GC.map((c,g)=>`<option value="${g}">第${g+1}組${GN[g]}</option>`).join('')}</select><span>獲得</span><select id="gvk" aria-label="事件卡">${IT.map((it,k)=>`<option value="${k}">${it.t}</option>`).join('')}</select></div><div class="row"><button class="btn" id="gvok">發放</button><button class="btn ghost" id="gvno">取消</button></div></dialog>
 <dialog id="pk"><span id="pkt" class="tiny"></span></dialog>`);
-if(STU)document.body.insertAdjacentHTML('beforeend','<dialog id="privatePeek"><div class="preview-shell"><div class="preview-card" id="previewCard"></div></div><div class="row"><button class="btn ghost" id="previewFlip">翻面</button><button class="btn" id="previewClose">關閉</button></div></dialog>');
+if(STU)document.body.insertAdjacentHTML('beforeend','<dialog id="privatePeek"><svg class="peek-timer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="track" d="M 8 2 H 92 Q 98 2 98 8 V 92 Q 98 98 92 98 H 8 Q 2 98 2 92 V 8 Q 2 2 8 2 Z"/><path class="progress" id="previewProgress" pathLength="1000" d="M 8 2 H 92 Q 98 2 98 8 V 92 Q 98 98 92 98 H 8 Q 2 98 2 92 V 8 Q 2 2 8 2 Z"/><path class="flow" pathLength="1000" d="M 8 2 H 92 Q 98 2 98 8 V 92 Q 98 98 92 98 H 8 Q 2 98 2 92 V 8 Q 2 2 8 2 Z"/></svg><div class="preview-shell"><div class="preview-card" id="previewCard"></div></div><div class="row"><button class="btn ghost" id="previewFlip">翻面</button><button class="btn" id="previewClose">關閉</button></div></dialog>');
 let curU=null,peekT=0,privatePeekT=0,lastPrivatePeek='';
 const gname=g=>`第${g+1}組${GN[g]}`;
 function renderItems(){
@@ -842,18 +852,18 @@ function playFx(who,title,col){bcast('fx',{who,title,col});
 }
 function peek(n){
   $('pkt').textContent='預覽：'+(S.deck.slice(0,n).map((id,i)=>'①②③'[i]+C[id][1]).join('　')||'牌堆已抽完');
-  $('pk').show();clearTimeout(peekT);peekT=setTimeout(()=>$('pk').close(),10000);
+  $('pk').show();clearTimeout(peekT);peekT=setTimeout(()=>$('pk').close(),12000);
 }
 function showPrivatePeek(id,token,ts){
   if(!STU||token===lastPrivatePeek)return;
-  const left=Number(ts)+10000-Date.now();if(left<=0)return;
+  const left=Number(ts)+12000-Date.now();if(left<=0)return;
   const c=C[id],b=B[id];if(!c||!b)return;lastPrivatePeek=token;
   $('previewCard').classList.remove('flip');
   $('previewFlip').textContent='翻面';
   $('previewCard').innerHTML=`<section class="preview-face"><div class="em"><span class="ms" aria-hidden="true">${c[0]}</span></div><h2>${c[1]}</h2><p>${c[2]}</p><div class="pts">拿下可得 ${c[3]} 分</div></section><section class="preview-face preview-back"><h2>所需 SDGs</h2><div class="preview-sdgs">${b[2].map(n=>`<span class="chip" style="background:${SDG[n][1]}">SDG${n} ${SDG[n][0]}</span>`).join('')}</div></section>`;
-  $('privatePeek').showModal();clearTimeout(privatePeekT);privatePeekT=setTimeout(()=>{if($('privatePeek').open)$('privatePeek').close()},left);
+  $('privatePeek').showModal();clearInterval(privatePeekT);const end=Number(ts)+12000;const tick=()=>{const remain=Math.max(0,(end-Date.now())/12000);$('previewProgress').setAttribute('stroke-dasharray',`${1000*remain} 1000`);if(remain<=0){clearInterval(privatePeekT);if($('privatePeek').open)$('privatePeek').close()}};tick();privatePeekT=setInterval(tick,80);
 }
-if(STU){$('previewCard').onclick=()=>$('previewCard').classList.toggle('flip');$('previewFlip').onclick=()=>{$('previewCard').classList.toggle('flip');$('previewFlip').textContent=$('previewCard').classList.contains('flip')?'翻回':'翻面'};$('previewClose').onclick=()=>$('privatePeek').close();$('privatePeek').addEventListener('close',()=>clearTimeout(privatePeekT))}
+if(STU){$('previewCard').onclick=()=>$('previewCard').classList.toggle('flip');$('previewFlip').onclick=()=>{$('previewCard').classList.toggle('flip');$('previewFlip').textContent=$('previewCard').classList.contains('flip')?'翻回':'翻面'};$('previewClose').onclick=()=>$('privatePeek').close();$('privatePeek').addEventListener('close',()=>clearInterval(privatePeekT))}
 function doUse(x){
   const it=IT[x.k],done=()=>{S.items=S.items.filter(y=>y.u!==x.u);save();renderItems();playFx(gname(x.g),it.t,GC[x.g])};
   if(it.use==='ban'){addBan(x.g,it.bk);done()}
